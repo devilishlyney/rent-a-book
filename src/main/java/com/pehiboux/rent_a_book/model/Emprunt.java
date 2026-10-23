@@ -54,4 +54,68 @@ public class Emprunt {
     @NotBlank(message = "Le rendu est obligatoire")
     @Column(nullable = false)
     private boolean rendu;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getLivreId() {
+        return livreId;
+    }
+
+    public void setLivreId(Long livreId) {
+        this.livreId = livreId;
+    }
+
+    public String getEmprunteur() {
+        return emprunteur;
+    }
+
+    public void setEmprunteur(String emprunteur) {
+        this.emprunteur = emprunteur;
+    }
+
+    public String getEmailEmprunteur() {
+        return emailEmprunteur;
+    }
+
+    public void setEmailEmprunteur(String emailEmprunteur) {
+        this.emailEmprunteur = emailEmprunteur;
+    }
+
+    public LocalDate getDateEmprunt() {
+        return dateEmprunt;
+    }
+
+    public void setDateEmprunt(LocalDate dateEmprunt) {
+        this.dateEmprunt = dateEmprunt;
+    }
+
+    public LocalDate getDateRetourPrevue() {
+        return dateRetourPrevue;
+    }
+
+    public void setDateRetourPrevue(LocalDate dateRetourPrevue) {
+        this.dateRetourPrevue = dateRetourPrevue;
+    }
+
+    public LocalDate getDateRetourEffective() {
+        return dateRetourEffective;
+    }
+
+    public void setDateRetourEffective(LocalDate dateRetourEffective) {
+        this.dateRetourEffective = dateRetourEffective;
+    }
+
+    public boolean isRendu() {
+        return rendu;
+    }
+
+    public void setRendu(boolean rendu) {
+        this.rendu = rendu;
+    }
 }
