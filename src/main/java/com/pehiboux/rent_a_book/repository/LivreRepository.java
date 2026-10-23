@@ -10,4 +10,6 @@ public interface LivreRepository extends JpaRepository<Livre, Long> {
 List<Livre> findByTitreContainingIgnoreCase(String titre);
 
 List<Livre> findByStockGreaterThan(Integer stock);
+
+List<Livre> findByAuteurId(Long auteurId);
 }
