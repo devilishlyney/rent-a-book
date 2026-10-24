@@ -1,96 +1,83 @@
 package com.pehiboux.rent_a_book.service;
 
 import com.pehiboux.rent_a_book.model.Emprunt;
+import com.pehiboux.rent_a_book.model.Livre;
 import com.pehiboux.rent_a_book.repository.EmpruntRepository;
+import com.pehiboux.rent_a_book.repository.LivreRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
-/**
- * Service contenant la logique métier pour les emprunts.
- * Le service est le chef d'orchestre : il coordonne les appels
- * au repository et applique les règles métier.
- */
+
 @Service
 public class EmpruntService {
+
+    /** Durée maximale d'un emprunt, en jours (RM5). */
+    public static final int DUREE_MAX_JOURS = 14;
+
     private final EmpruntRepository empruntRepository;
-    /**
-     * Injection de dépendance par constructeur.
-     * Spring injecte automatiquement l'AuteurRepository.
-     */
-    public EmpruntService(EmpruntRepository empruntRepository) {
+    private final LivreRepository livreRepository;
+
+    public EmpruntService(EmpruntRepository empruntRepository, LivreRepository livreRepository) {
         this.empruntRepository = empruntRepository;
+        this.livreRepository = livreRepository;
     }
-    /**
-     * Retourne tous les emprunts.
-     */
-    public List<Emprunt> recupererTous() {
-        return empruntRepository.findAll();
+
+    public Page<Emprunt> recupererTous(Pageable pageable) {
+        return empruntRepository.findAll(pageable);
     }
-    /**
-     * Retourne un emprunt par son ID.
-     * @return Optional vide si l'emprunt n'existe pas.
-     */
+
     public Optional<Emprunt> recupererParId(Long id) {
         return empruntRepository.findById(id);
     }
-    /**
-     * Crée un nouveau emprunt.
-     * @param emprunt L'emprunt à créer (sans ID).
-     * @return L'emprunt créé (avec ID généré).
-     */
+
+    public boolean livreExiste(Long livreId) {
+        return livreRepository.existsById(livreId);
+    }
+
+    public boolean livreDisponible(Long livreId) {
+        Optional<Livre> livre = livreRepository.findById(livreId);
+        return livre.isPresent() && livre.get().getStock() > 0;
+    }
+
     public Emprunt creer(Emprunt emprunt) {
-        // On s'assure que l'ID est null pour forcer une création (pas une mise jour)
         emprunt.setId(null);
+        emprunt.setDateEmprunt(LocalDate.now());
+        emprunt.setDateRetourPrevue(LocalDate.now().plusDays(DUREE_MAX_JOURS));
+        emprunt.setDateRetourEffective(null);
+        emprunt.setRendu(false);
+
+        Optional<Livre> optLivre = livreRepository.findById(emprunt.getLivreId());
+        if (optLivre.isPresent()) {
+            Livre livre = optLivre.get();
+            livre.setStock(livre.getStock() - 1);
+            livreRepository.save(livre);
+        }
+
         return empruntRepository.save(emprunt);
     }
-    /**
-     * Met à jour un emprunt existant.
-     * @param id L'ID de l'emprunt à modifier.
-     * @param empruntModifie Les nouvelles valeurs.
-     * @return Optional contenant l'emprunt mis à jour, ou vide si l'ID n'existe
-    pas.
-     */
-    public Optional<Emprunt> mettreAJour(Long id, Emprunt empruntModifie) {
-        return empruntRepository.findById(id)
-                .map(empruntExistant -> {
-                    empruntExistant.setLivreId(empruntModifie.getLivreId());
-                    empruntExistant.setEmprunteur(empruntModifie.getEmprunteur());
-                    empruntExistant.setEmailEmprunteur(empruntModifie.getEmailEmprunteur());
-                    empruntExistant.setDateEmprunt(empruntModifie.getDateEmprunt());
-                    empruntExistant.setDateRetourPrevue(empruntModifie.getDateRetourPrevue());
-                    empruntExistant.setDateRetourEffective(empruntModifie.getDateRetourEffective());
-                    empruntExistant.setRendu(empruntModifie.isRendu());
-                    return empruntRepository.save(empruntExistant);
-                });
-    }
-    /**
-     * Supprime un emprunt par son ID.
-     * @return true si l'emprunt existait et a été supprimé, false sinon.
-     */
-    public boolean supprimer(Long id) {
-        if (empruntRepository.existsById(id)) {
-            empruntRepository.deleteById(id);
-            return true;
+
+    public Emprunt retourner(Emprunt emprunt) {
+        emprunt.setRendu(true);
+        emprunt.setDateRetourEffective(LocalDate.now());
+
+        Optional<Livre> optLivre = livreRepository.findById(emprunt.getLivreId());
+        if (optLivre.isPresent()) {
+            Livre livre = optLivre.get();
+            livre.setStock(livre.getStock() + 1);
+            livreRepository.save(livre);
         }
-        return false;
+
+        return empruntRepository.save(emprunt);
     }
-    /**
-     * Liste les emprunts en cours.
-     * @return Page contenant la liste des emprunts en cours
-     */
-    public Page<Emprunt> recupererEmpruntsEnCours(Pageable pageable){
-        return this.empruntRepository.findByRenduFalse(pageable);
+
+    public Page<Emprunt> recupererEnCours(Pageable pageable) {
+        return empruntRepository.findByRenduFalse(pageable);
     }
-    /**
-     * Liste les emprunts en retard.
-     * @return List contenant la liste des emprunts en retard
-     */
-    public List<Emprunt> recupererEmpruntsEnRetard(LocalDate date){
-        return this.empruntRepository.findByRenduFalseAndDateRetourPrevueBefore(date);
+
+    public Page<Emprunt> recupererEnRetard(Pageable pageable) {
+        return empruntRepository.findByRenduFalseAndDateRetourPrevueBefore(LocalDate.now(), pageable);
     }
 }
-
